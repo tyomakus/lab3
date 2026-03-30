@@ -1,27 +1,34 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="mb-3">
-    <h4>Поиск статей</h4>
-    {% if error %}
-    <div class="alert alert-danger">{{ error }}</div>
-    {% endif %}
-    <form action="/search" method="get" class="row g-2">
-        <div class="col-md-6">
-            <input type="text" name="q" value="{{ q or '' }}" class="form-control" placeholder="Введите название или текст статьи">
-        </div>
-        <div class="col-md-3">
-            <select name="min_rating" class="form-select">
-                <option value="0">Любой рейтинг</option>
-                <option value="3">От 3.0</option>
-                <option value="4">От 4.0</option>
-                <option value="5">Только 5.0</option>
-            </select>
-        </div>
-        <div class="col-md-3">
-            <button type="submit" class="btn btn-primary w-100">Найти</button>
-        </div>
-    </form>
+<div class="card mb-4">
+    <div class="card-body">
+        <h4>
+            <i class="fas fa-search"></i> Поиск статей
+        </h4>
+        {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+        <form action="/search" method="get" class="row g-2">
+            <div class="col-md-6">
+                <input type="text" name="q" value="{{ q or '' }}" class="form-control" 
+                       placeholder="Введите название или текст статьи">
+            </div>
+            <div class="col-md-4">
+                <select name="min_rating" class="form-select">
+                    <option value="0">Любой рейтинг</option>
+                    <option value="3">От 3.0</option>
+                    <option value="4">От 4.0</option>
+                    <option value="5">Только 5.0</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search"></i> Найти
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
 
 {% if results %}
@@ -30,11 +37,13 @@
     <a href="/articles/{{ item.article.id }}" class="list-group-item list-group-item-action">
         <h5>{{ item.article.title }}</h5>
         <p>{{ item.article.content[:150] }}...</p>
-        <small>Рейтинг: {{ item.avg_rating }}</small>
+        <small class="text-warning">
+            <i class="fas fa-star"></i> Рейтинг: {{ "%.1f"|format(item.avg_rating) if item.avg_rating else 'Нет оценок' }}
+        </small>
     </a>
     {% endfor %}
 </div>
 {% elif q %}
-<p>По вашему запросу ничего не найдено.</p>
+<p class="text-center text-white">По вашему запросу ничего не найдено.</p>
 {% endif %}
 {% endblock %}

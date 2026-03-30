@@ -1,47 +1,189 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="mb-4">
-    <h2>{{ article.title }}</h2>
-    <p>{{ article.content }}</p>
-    <p><strong>Автор ID:</strong> {{ article.author_id }} | 
-       <strong>Категория ID:</strong> {{ article.category_id }} | 
-       <strong>Выпуск ID:</strong> {{ article.issue_id }}</p>
-    <p><strong>Средний рейтинг:</strong> {{ avg_rating }}</p>
+
+<!-- Расчет времени чтения -->
+{% set words = article.content.split()|length %}
+{% set reading_time = (words / 200)|round|int %}
+{% if reading_time < 1 %}
+    {% set reading_time = 1 %}
+{% endif %}
+
+<div class="alert alert-info">
+    <strong>Отладка:</strong><br>
+    views_count: {{ views_count }}<br>
+    views: {{ views }}<br>
+    article.views: {{ article.views }}<br>
+    Все переменные: {{ context.keys() if context else 'нет' }}
 </div>
 
-<div class="mb-4">
-    <h4>Комментарии</h4>
-    {% for comment in comments %}
-    <div class="card mb-2 p-2">
-        <strong>{{ comment.author }}</strong> 
-        <span class="text-warning">{{ "★" * comment.rating }}</span>
-        <p>{{ comment.text }}</p>
-        <small class="text-muted">{{ comment.created_at.strftime('%d.%m.%Y %H:%M') }}</small>
+<div class="card mb-4">
+    <div class="card-body">
+        <h2>{{ article.title }}</h2>
+        
+        <!-- Статистика чтения -->
+        <div class="text-muted mb-3 pb-2 border-bottom">
+            <div class="row">
+                <div class="col-md-4">
+                    <i class="fas fa-clock"></i> 
+                    <strong>Время чтения:</strong> {{ reading_time }} мин.
+                </div>
+                <div class="col-md-4">
+                    <i class="fas fa-eye"></i> 
+                    <strong>Просмотров:</strong> {{ views_count }}
+                </div>
+                <div class="col-md-4">
+                    <i class="fas fa-star text-warning"></i> 
+                    <strong>Средний рейтинг:</strong> 
+                    {% if avg_rating %}
+                        {{ "%.1f"|format(avg_rating) }}
+                    {% else %}
+                        Нет оценок
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <p class="lead">{{ article.content }}</p>
+        <hr>
+        <p class="text-muted">
+            <i class="fas fa-user"></i> <strong>Автор ID:</strong> {{ article.author_id }} | 
+            <i class="fas fa-tag"></i> <strong>Категория ID:</strong> {{ article.category_id }} | 
+            <i class="fas fa-calendar-week"></i> <strong>Выпуск ID:</strong> {{ article.issue_id }}
+        </p>
+        
+        <!-- Кнопки: Поделиться и QR-код -->
+        <div class="mt-3 pt-2 border-top">
+            <div class="row align-items-center">
+                <div class="col-md-7 mb-3 mb-md-0">
+                    <strong><i class="fas fa-share-alt"></i> Поделиться:</strong>
+                    <div class="btn-group mt-2 flex-wrap" role="group">
+                        <a href="https://t.me/share/url?url={{ request.url }}&text={{ article.title }}" 
+                           target="_blank" class="btn btn-outline-info btn-sm">
+                            <i class="fab fa-telegram"></i> Telegram
+                        </a>
+                        <a href="https://vk.com/share.php?url={{ request.url }}&title={{ article.title }}" 
+                           target="_blank" class="btn btn-outline-primary btn-sm">
+                            <i class="fab fa-vk"></i> VK
+                        </a>
+                        <a href="https://twitter.com/intent/tweet?url={{ request.url }}&text={{ article.title }}" 
+                           target="_blank" class="btn btn-outline-dark btn-sm">
+                            <i class="fab fa-twitter"></i> Twitter
+                        </a>
+                        <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.url }}" 
+                           target="_blank" class="btn btn-outline-secondary btn-sm">
+                            <i class="fab fa-facebook"></i> Facebook
+                        </a>
+                        <button class="btn btn-outline-success btn-sm" onclick="copyToClipboard('{{ request.url }}')">
+                            <i class="fas fa-link"></i> Копировать
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="col-md-5 text-md-end">
+                    <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" 
+                            data-bs-target="#qrCollapse" aria-expanded="false">
+                        <i class="fas fa-qrcode"></i> Показать QR-код
+                    </button>
+                </div>
+            </div>
+            
+            <!-- QR-код (скрыт по умолчанию) -->
+            <div class="collapse mt-3" id="qrCollapse">
+                <div class="card card-body text-center" style="max-width: 300px; margin: 0 auto;">
+                    <div id="qrcode"></div>
+                    <p class="mt-2 mb-0 small text-muted">
+                        <i class="fas fa-mobile-alt"></i> Наведите камеру телефона
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
-    {% else %}
-    <p>Комментариев пока нет.</p>
-    {% endfor %}
 </div>
 
-<div class="card p-3">
-    <h5>Оставить комментарий</h5>
-    <form action="/articles/{{ article.id }}/comments" method="post">
-        <div class="mb-2">
-            <input type="text" name="author" class="form-control" placeholder="Ваше имя (или Аноним)">
+<div class="card mb-4">
+    <div class="card-body">
+        <h4>
+            <i class="fas fa-comments"></i> Комментарии
+        </h4>
+        {% for comment in comments %}
+        <div class="card mb-2 p-3" style="background: #f8f9fa;">
+            <div class="d-flex justify-content-between align-items-center">
+                <strong>{{ comment.author }}</strong> 
+                <span class="text-warning">
+                    {% for i in range(comment.rating) %}★{% endfor %}
+                    {% for i in range(5 - comment.rating) %}☆{% endfor %}
+                </span>
+            </div>
+            <p class="mt-2">{{ comment.text }}</p>
+            <small class="text-muted">{{ comment.created_at.strftime('%d.%m.%Y %H:%M') }}</small>
         </div>
-        <div class="mb-2">
-            <textarea name="text" class="form-control" placeholder="Ваш комментарий" required></textarea>
-        </div>
-        <div class="mb-2">
-            <label>Оценка:</label>
-            <select name="rating" class="form-select">
-                {% for i in range(5, 0, -1) %}
-                <option value="{{ i }}">{{ i }} звёзд</option>
-                {% endfor %}
-            </select>
-        </div>
-        <button type="submit" class="btn btn-primary">Опубликовать</button>
-    </form>
+        {% else %}
+        <p class="text-muted">Комментариев пока нет.</p>
+        {% endfor %}
+    </div>
 </div>
+
+<div class="card">
+    <div class="card-body">
+        <h5>
+            <i class="fas fa-edit"></i> Оставить комментарий
+        </h5>
+        <form action="/articles/{{ article.id }}/comments" method="post">
+            <div class="mb-2">
+                <input type="text" name="author" class="form-control" placeholder="Ваше имя (или Аноним)">
+            </div>
+            <div class="mb-2">
+                <textarea name="text" class="form-control" placeholder="Ваш комментарий" required></textarea>
+            </div>
+            <div class="mb-2">
+                <label>Оценка:</label>
+                <select name="rating" class="form-select">
+                    {% for i in range(5, 0, -1) %}
+                    <option value="{{ i }}">{{ i }} звёзд</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-paper-plane"></i> Опубликовать
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Библиотеки для QR-кода -->
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+    // Функция копирования ссылки
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(function() {
+            const btn = event.target.closest('button');
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i> Скопировано!';
+            setTimeout(() => {
+                btn.innerHTML = originalHtml;
+            }, 2000);
+        }).catch(function() {
+            alert('Не удалось скопировать ссылку');
+        });
+    }
+    
+    // Генерация QR-кода при показе collapse
+    const qrCollapse = document.getElementById('qrCollapse');
+    if (qrCollapse) {
+        qrCollapse.addEventListener('show.bs.collapse', function () {
+            const qrContainer = document.getElementById('qrcode');
+            if (qrContainer && !qrContainer.hasChildNodes()) {
+                new QRCode(qrContainer, {
+                    text: window.location.href,
+                    width: 200,
+                    height: 200,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+            }
+        });
+    }
+</script>
 {% endblock %}

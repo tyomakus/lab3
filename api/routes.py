@@ -100,31 +100,7 @@ async def create_article(
     return RedirectResponse(url="/", status_code=303)
 
 
-# Детали статьи + комментарии + рейтинг
-@router.get("/articles/{article_id}")
-async def article_detail(
-    request: Request, article_id: int,
-    db: AsyncSession = Depends(get_sql_db),
-    rd=Depends(get_redis)
-):
-    article = await db.get(Article, article_id)
-    if not article:
-        raise HTTPException(status_code=404, detail="Статья не найдена")
 
-    # увеличить популярность в Redis
-    await rd.zincrby("popular:articles", 1, str(article_id))
-
-    # средний рейтинг с кеша
-    avg_rating = await get_cached_rating(article_id, rd)
-
-    # последние комментарии из MongoDB
-    comments = await comments_col.find({"article_id": article_id}).sort("created_at", -1).to_list(100)
-
-    return templates.TemplateResponse(
-        request=request,
-        name="article_detail.html",
-        context={"article": article, "comments": comments, "avg_rating": round(avg_rating, 1)}
-    )
 
 
 # Добавление комментария
@@ -205,4 +181,44 @@ async def popular_articles(
         request=request,
         name="popular.html",
         context={"results": results}
+    )
+# Детали статьи + комментарии + рейтинг
+@router.get("/articles/{article_id}")
+async def article_detail(
+    request: Request, article_id: int,
+    db: AsyncSession = Depends(get_sql_db),
+    rd=Depends(get_redis)
+):
+    article = await db.get(Article, article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail="Статья не найдена")
+
+    # увеличить популярность в Redis
+    await rd.zincrby("popular:articles", 1, str(article_id))
+
+    # Получаем просмотры из Redis
+    views_count = await rd.zscore("popular:articles", str(article_id))
+    if views_count:
+        views_count = int(views_count)
+    else:
+        views_count = 0
+
+    # средний рейтинг с кеша
+    avg_rating = await get_cached_rating(article_id, rd)
+
+    # последние комментарии из MongoDB
+    comments = await comments_col.find({"article_id": article_id}).sort("created_at", -1).to_list(100)
+
+    print(f"DEBUG: views_count={views_count}, avg_rating={avg_rating}")  # Отладка
+
+    return templates.TemplateResponse(
+        request=request,
+        name="article_detail.html",
+        context={
+            "article": article, 
+            "comments": comments, 
+            "avg_rating": round(avg_rating, 1) if avg_rating else None,
+            "views_count": views_count,  # Добавляем просмотры
+            "views": views_count  # Дублируем для проверки
+        }
     )
