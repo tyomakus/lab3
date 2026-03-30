@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4">
+    <h2>Каталог статей</h2>
+    <a href="/articles/new" class="btn btn-success">+ Добавить статью</a>
+</div>
+
+<div class="row">
+    {% for article in articles %}
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">{{ article.title }}</h5>
+                <p class="card-text">{{ article.content[:150] }}...</p>
+                <a href="/articles/{{ article.id }}" class="btn btn-primary">Читать полностью</a>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <p>Статей пока нет. <a href="/articles/new">Добавьте первую!</a></p>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-3">
+    <h4>Поиск статей</h4>
+    {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+    <form action="/search" method="get" class="row g-2">
+        <div class="col-md-6">
+            <input type="text" name="q" value="{{ q or '' }}" class="form-control" placeholder="Введите название или текст статьи">
+        </div>
+        <div class="col-md-3">
+            <select name="min_rating" class="form-select">
+                <option value="0">Любой рейтинг</option>
+                <option value="3">От 3.0</option>
+                <option value="4">От 4.0</option>
+                <option value="5">Только 5.0</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-primary w-100">Найти</button>
+        </div>
+    </form>
+</div>
+
+{% if results %}
+<div class="list-group">
+    {% for item in results %}
+    <a href="/articles/{{ item.article.id }}" class="list-group-item list-group-item-action">
+        <h5>{{ item.article.title }}</h5>
+        <p>{{ item.article.content[:150] }}...</p>
+        <small>Рейтинг: {{ item.avg_rating }}</small>
+    </a>
+    {% endfor %}
+</div>
+{% elif q %}
+<p>По вашему запросу ничего не найдено.</p>
+{% endif %}
+{% endblock %}

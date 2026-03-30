@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Авторы</title>
+</head>
+<body>
+    <h1>Авторы</h1>
+
+    <form action="/authors/new" method="post">
+        <input type="text" name="name" placeholder="Имя автора" required>
+        <input type="email" name="email" placeholder="Email автора" required>
+        <button type="submit">Создать автора</button>
+    </form>
+
+    <h2>Список авторов</h2>
+    <ul>
+        {% for author in authors %}
+            <li>ID: {{ author.id }} — {{ author.name }} ({{ author.email }})</li>
+        {% endfor %}
+    </ul>
+
+    <a href="/articles/new">Создать статью</a>
+</body>
+</html>

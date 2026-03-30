@@ -1,0 +1,8 @@
+fastapi[all]==0.109.1
+uvicorn[standard]==0.23.2
+sqlalchemy==2.0.20
+asyncpg==0.27.0
+motor==4.3.4
+redis[asyncio]==5.6.0
+pydantic==2.5.1
+python-dotenv==1.0.1

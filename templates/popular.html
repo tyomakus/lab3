@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h4>Популярные статьи</h4>
+{% for item in results %}
+<div class="card mb-3 p-3">
+    <h5>{{ item.article.title }}</h5>
+    <p>{{ item.article.content[:150] }}...</p>
+    <p>Просмотров: <strong>{{ item.views }}</strong></p>
+    <a href="/articles/{{ item.article.id }}" class="btn btn-primary btn-sm">Читать полностью</a>
+</div>
+{% else %}
+<p>Данных о просмотрах пока нет.</p>
+{% endfor %}
+{% endblock %}

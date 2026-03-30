@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4">
+    <h2>{{ article.title }}</h2>
+    <p>{{ article.content }}</p>
+    <p><strong>Автор ID:</strong> {{ article.author_id }} | 
+       <strong>Категория ID:</strong> {{ article.category_id }} | 
+       <strong>Выпуск ID:</strong> {{ article.issue_id }}</p>
+    <p><strong>Средний рейтинг:</strong> {{ avg_rating }}</p>
+</div>
+
+<div class="mb-4">
+    <h4>Комментарии</h4>
+    {% for comment in comments %}
+    <div class="card mb-2 p-2">
+        <strong>{{ comment.author }}</strong> 
+        <span class="text-warning">{{ "★" * comment.rating }}</span>
+        <p>{{ comment.text }}</p>
+        <small class="text-muted">{{ comment.created_at.strftime('%d.%m.%Y %H:%M') }}</small>
+    </div>
+    {% else %}
+    <p>Комментариев пока нет.</p>
+    {% endfor %}
+</div>
+
+<div class="card p-3">
+    <h5>Оставить комментарий</h5>
+    <form action="/articles/{{ article.id }}/comments" method="post">
+        <div class="mb-2">
+            <input type="text" name="author" class="form-control" placeholder="Ваше имя (или Аноним)">
+        </div>
+        <div class="mb-2">
+            <textarea name="text" class="form-control" placeholder="Ваш комментарий" required></textarea>
+        </div>
+        <div class="mb-2">
+            <label>Оценка:</label>
+            <select name="rating" class="form-select">
+                {% for i in range(5, 0, -1) %}
+                <option value="{{ i }}">{{ i }} звёзд</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Опубликовать</button>
+    </form>
+</div>
+{% endblock %}
