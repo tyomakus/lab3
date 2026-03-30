@@ -9,13 +9,6 @@
     {% set reading_time = 1 %}
 {% endif %}
 
-<div class="alert alert-info">
-    <strong>Отладка:</strong><br>
-    views_count: {{ views_count }}<br>
-    views: {{ views }}<br>
-    article.views: {{ article.views }}<br>
-    Все переменные: {{ context.keys() if context else 'нет' }}
-</div>
 
 <div class="card mb-4">
     <div class="card-body">
