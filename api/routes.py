@@ -11,7 +11,7 @@ from database.mongo_db import comments_col, statistics_col
 from database.redis_db import get_redis
 from database.models import Article
 from schemas.schemas import ArticleCreate, CommentCreate
-from utils import get_cached_rating
+from utils import get_cached_rating, update_statistics
 from database.models import Author
 from database.crud import (
     get_authors, get_categories, get_issues,
@@ -116,6 +116,9 @@ async def add_comment(
     )
     await comments_col.insert_one(comment_data.model_dump())
 
+    # Увеличить общий счетчик комментариев в Redis
+    await rd.incr("total:comments")
+
     # удалить старый кеш среднего рейтинга
     await rd.delete(f"article:{article_id}:avg_rating")
 
@@ -192,6 +195,9 @@ async def article_detail(
     # увеличить популярность в Redis
     await rd.zincrby("popular:articles", 1, str(article_id))
 
+    # Увеличить общий счетчик просмотров в Redis
+    await rd.incr("total:views")
+
     # Получаем просмотры из Redis
     views_count = await rd.zscore("popular:articles", str(article_id))
     if views_count:
@@ -236,10 +242,20 @@ async def statistics_page(
     # Получаем статистику выпусков с COUNT и DISTINCt
     issues_stats = await get_issues_with_stats(db)
 
-    # Получаем статистику из MongoDB (агрегация)
+    # Получаем счетчики из Redis (новые просмотры и комментарии)
+    total_views_redis = await rd.get("total:views")
+    total_comments_redis = await rd.get("total:comments")
+
+    # Получаем старую статистику из MongoDB
     mongo_stats = await statistics_col.find_one({"_id": "global"})
-    if not mongo_stats:
-        mongo_stats = {"total_views": 0, "total_comments": 0}
+    old_views = mongo_stats.get("total_views", 0) if mongo_stats else 0
+    old_comments = mongo_stats.get("total_comments", 0) if mongo_stats else 0
+
+    # Объединяем старую статистику с новой
+    mongo_stats = {
+        "total_views": old_views + (int(total_views_redis) if total_views_redis else 0),
+        "total_comments": old_comments + (int(total_comments_redis) if total_comments_redis else 0)
+    }
 
     # Получаем список популярных статей из Redis
     top_articles = await rd.zrevrange("popular:articles", 0, 4, withscores=True)
