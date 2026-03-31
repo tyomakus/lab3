@@ -8,5 +8,5 @@ def get_mongo_collection(collection_name: str):
     return mongo_db[collection_name]
 
 comments_col = get_mongo_collection("comments")
-
+statistics_col = get_mongo_collection("statistics")
 

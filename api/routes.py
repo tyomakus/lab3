@@ -4,15 +4,22 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
+from datetime import datetime
 
 from database.sql_db import get_sql_db
-from database.mongo_db import comments_col
+from database.mongo_db import comments_col, statistics_col
 from database.redis_db import get_redis
 from database.models import Article
 from schemas.schemas import ArticleCreate, CommentCreate
 from utils import get_cached_rating
 from database.models import Author
-from database.crud import get_authors, get_categories, get_issues
+from database.crud import (
+    get_authors, get_categories, get_issues,
+    get_authors_with_article_count,
+    get_categories_with_stats,
+    get_issues_with_stats
+)
+
 
 
 
@@ -39,6 +46,16 @@ async def create_author_page(name: str = Form(...), email: str = Form(...), db: 
     return RedirectResponse("/authors", status_code=303)
 
 
+# Главная — список всех статей
+@router.get("/")
+async def index(request: Request, db: AsyncSession = Depends(get_sql_db)):
+    result = await db.execute(select(Article))
+    articles = result.scalars().all()
+    return templates.TemplateResponse(
+        request=request, name="index.html", context={"articles": articles}
+    )
+
+
 # Страница добавления статьи с выбором из списков
 @router.get("/articles/new")
 async def add_article_page(request: Request, db: AsyncSession = Depends(get_sql_db)):
@@ -53,27 +70,6 @@ async def add_article_page(request: Request, db: AsyncSession = Depends(get_sql_
             "categories": categories,
             "issues": issues
         }
-    )
-
-# Главная — список всех статей
-@router.get("/")
-async def index(request: Request, db: AsyncSession = Depends(get_sql_db)):
-    result = await db.execute(select(Article))
-    articles = result.scalars().all()
-    return templates.TemplateResponse(
-        request=request, name="index.html", context={"articles": articles}
-    )
-
-
-# Страница добавления статьи
-@router.get("/articles/new")
-async def add_article_page(request: Request, db: AsyncSession = Depends(get_sql_db)):
-    result = await db.execute(select(Author))
-    authors = result.scalars().all()
-    return templates.TemplateResponse(
-        request=request, 
-        name="add_article.html", 
-        context={"authors": authors}
     )
 
 
@@ -215,10 +211,47 @@ async def article_detail(
         request=request,
         name="article_detail.html",
         context={
-            "article": article, 
-            "comments": comments, 
+            "article": article,
+            "comments": comments,
             "avg_rating": round(avg_rating, 1) if avg_rating else None,
             "views_count": views_count,  # Добавляем просмотры
             "views": views_count  # Дублируем для проверки
+        }
+    )
+
+
+# Статистика с использованием JOIN и GROUP BY
+@router.get("/statistics")
+async def statistics_page(
+    request: Request,
+    db: AsyncSession = Depends(get_sql_db),
+    rd=Depends(get_redis)
+):
+    # Получаем статистику авторов с COUNT
+    authors_stats = await get_authors_with_article_count(db)
+
+    # Получаем статистику категорий
+    categories_stats = await get_categories_with_stats(db)
+
+    # Получаем статистику выпусков с COUNT и DISTINCt
+    issues_stats = await get_issues_with_stats(db)
+
+    # Получаем статистику из MongoDB (агрегация)
+    mongo_stats = await statistics_col.find_one({"_id": "global"})
+    if not mongo_stats:
+        mongo_stats = {"total_views": 0, "total_comments": 0}
+
+    # Получаем список популярных статей из Redis
+    top_articles = await rd.zrevrange("popular:articles", 0, 4, withscores=True)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="statistics.html",
+        context={
+            "authors_stats": authors_stats,
+            "categories_stats": categories_stats,
+            "issues_stats": issues_stats,
+            "mongo_stats": mongo_stats,
+            "top_articles": top_articles
         }
     )
