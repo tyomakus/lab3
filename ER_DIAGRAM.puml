@@ -1,0 +1,51 @@
+@startuml ER_Diagram
+!define ENTITY_BG #E1F5FF
+!define PK_COLOR #FFEB3B
+!define FK_COLOR #FF6F00
+
+skinparam backgroundColor #FAFAFA
+skinparam classBackgroundColor ENTITY_BG
+skinparam classBorderColor #0277BD
+skinparam classArrowColor #0277BD
+
+entity "👤 Authors" as Authors {
+    * **id** : INT <<PK>> #FFEB3B
+    --
+    * **name** : VARCHAR(100)
+    * **email** : VARCHAR(100) <<UNIQUE>>
+}
+
+entity "📁 Categories" as Categories {
+    * **id** : INT <<PK>> #FFEB3B
+    --
+    * **title** : VARCHAR(100) <<UNIQUE>>
+}
+
+entity "📖 Issues" as Issues {
+    * **id** : INT <<PK>> #FFEB3B
+    --
+    * **number** : INT
+    * **publish_date** : DATE
+}
+
+entity "📰 Articles" as Articles {
+    * **id** : INT <<PK>> #FFEB3B
+    --
+    * **title** : VARCHAR(200)
+    * **content** : TEXT
+    * **author_id** : INT <<FK>> #FF6F00
+    * **category_id** : INT <<FK>> #FF6F00
+    * **issue_id** : INT <<FK>> #FF6F00
+    * **created_at** : TIMESTAMP
+}
+
+Authors ||--o{ Articles : "writes"
+Categories ||--o{ Articles : "belongs_to"
+Issues ||--o{ Articles : "contains"
+
+@enduml
+
+ПРИМЕЧАНИЕ:
+- PK (Primary Key) = оранжевый фон (#FFEB3B)
+- FK (Foreign Key) = красный фон (#FF6F00)
+- 1:M отношения показаны стрелками с линиями
