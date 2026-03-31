@@ -33,7 +33,9 @@ async def get_authors_with_article_count(db: AsyncSession):
         Author.name,
         Author.email,
         func.count(Article.id).label('article_count')
-    ).outerjoin(Article).group_by(Author.id, Author.name, Author.email)
+    ).select_from(Author).outerjoin(
+        Article, Author.id == Article.author_id
+    ).group_by(Author.id, Author.name, Author.email)
 
     result = await db.execute(stmt)
     return result.all()
@@ -44,7 +46,9 @@ async def get_categories_with_stats(db: AsyncSession):
         Category.id,
         Category.title,
         func.count(Article.id).label('article_count')
-    ).outerjoin(Article).group_by(Category.id, Category.title)
+    ).select_from(Category).outerjoin(
+        Article, Category.id == Article.category_id
+    ).group_by(Category.id, Category.title)
 
     result = await db.execute(stmt)
     return result.all()
@@ -57,7 +61,11 @@ async def get_issues_with_stats(db: AsyncSession):
         Issue.publish_date,
         func.count(Article.id).label('article_count'),
         func.count(func.distinct(Author.id)).label('unique_authors')
-    ).outerjoin(Article).outerjoin(Author, Article.author_id == Author.id).group_by(
+    ).select_from(Issue).outerjoin(
+        Article, Issue.id == Article.issue_id
+    ).outerjoin(
+        Author, Article.author_id == Author.id
+    ).group_by(
         Issue.id, Issue.number, Issue.publish_date
     ).order_by(desc(Issue.publish_date))
 
